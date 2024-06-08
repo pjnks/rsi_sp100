@@ -1,0 +1,52 @@
+import yfinance as yf
+import pandas as pd
+import time
+
+# Define the S&P 100 tickers
+sp100_tickers = [
+    "AAPL", "ABBV", "ABT", "ACN", "AIG", "AMD", "AMGN", "AMT", "AMZN", "AVGO",
+    "AXP", "BA", "BAC", "BIIB", "BK", "BKNG", "BLK", "BMY", "BRK-B", "C", "CAT",
+    "CHTR", "CL", "CMCSA", "COF", "COP", "COST", "CRM", "CSCO", "CVS", "CVX",
+    "DHR", "DIS", "DOW", "DUK", "EMR", "EXC", "F", "FDX", "GD", "GE",
+    "GILD", "GM", "GOOG", "GOOGL", "GS", "HD", "HON", "IBM", "INTC", "JNJ",
+    "JPM", "KHC", "KMI", "KO", "LLY", "LMT", "LOW", "MA", "MCD", "MDT", "MET",
+    "META", "MMM", "MO", "MRK", "MS", "MSFT", "NEE", "NFLX", "NKE", "NVDA", "ORCL",
+    "PEP", "PFE", "PG", "PM", "PYPL", "QCOM", "RTX", "SBUX", "SCHW", "SO", "SPG",
+    "T", "TGT", "TMO", "TMUS", "TSLA", "TXN", "UNH", "UNP", "UPS", "USB", "V",
+    "VZ", "WBA", "WFC", "WMT", "XOM"
+]
+
+# Function to calculate RSI
+def get_rsi(ticker):
+    data = yf.download(ticker, period='7d', interval='15m')  # 7 days of data in 15-minute intervals
+    if data.empty:
+        return None
+
+    delta = data['Close'].diff(1)
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+
+    avg_gain = gain.rolling(window=14, min_periods=1).mean()
+    avg_loss = loss.rolling(window=14, min_periods=1).mean()
+
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi.iloc[-1] if not rsi.empty else None
+
+# Initialize an empty list to hold the results
+results = []
+
+# Iterate over each ticker
+for ticker in sp100_tickers:
+    rsi = get_rsi(ticker)
+    if rsi is not None and rsi < 30:
+        results.append((ticker, rsi))
+    time.sleep(1)  # Pause to avoid hitting API rate limits
+
+# Create a DataFrame from the results
+results_df = pd.DataFrame(results, columns=['Ticker', 'RSI'])
+results_df.sort_values(by='RSI', inplace=True)
+results_df.reset_index(drop=True, inplace=True)
+
+print(results_df)
